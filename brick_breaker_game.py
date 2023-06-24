@@ -15,24 +15,30 @@ class Ball(pygame.sprite.Sprite):
         
     def collision(self, group):
         global score
-        self.collide_brick = pygame.sprite.groupcollide(group, brick_group, False, True)
         tollerance = self.speed +5
 
+        self.collide_brick = pygame.sprite.groupcollide(group, brick_group, False, False)
         if len(self.collide_brick) > 0:
-            for i in self.collide_brick:
-                score += self.collide_brick[i][0].points
-                if abs(self.rect.top - self.collide_brick[i][0].rect.bottom) < tollerance:
-                    self.rect.top = self.collide_brick[i][0].rect.bottom
+            for sprite in self.collide_brick:
+                score += self.collide_brick[sprite][0].points
+                if abs(self.rect.top - self.collide_brick[sprite][0].rect.bottom) < tollerance:
+                    self.rect.top = self.collide_brick[sprite][0].rect.bottom
                     self.angle = math.pi - self.angle
-                if abs(self.rect.bottom - self.collide_brick[i][0].rect.top) < tollerance:
-                    self.rect.bottom = self.collide_brick[i][0].rect.top
+                if abs(self.rect.bottom - self.collide_brick[sprite][0].rect.top) < tollerance:
+                    self.rect.bottom = self.collide_brick[sprite][0].rect.top
                     self.angle = math.pi - self.angle
-                if abs(self.rect.right - self.collide_brick[i][0].rect.left) < tollerance:
-                    self.rect.right = self.collide_brick[i][0].rect.left
+                if abs(self.rect.right - self.collide_brick[sprite][0].rect.left) < tollerance:
+                    self.rect.right = self.collide_brick[sprite][0].rect.left
                     self.angle = 2*math.pi - self.angle
-                if abs(self.rect.left - self.collide_brick[i][0].rect.right) < tollerance:
-                    self.rect.left = self.collide_brick[i][0].rect.right
+                if abs(self.rect.left - self.collide_brick[sprite][0].rect.right) < tollerance:
+                    self.rect.left = self.collide_brick[sprite][0].rect.right
                     self.angle = 2*math.pi - self.angle
+
+                if self.collide_brick[sprite][0].hardness == 1:
+                   self.collide_brick[sprite][0].cracked()
+                else:
+                    brick_group.remove(self.collide_brick[sprite][0])
+
         self.collide_bar = pygame.sprite.groupcollide(group, bar_group, False, False)
         if len(self.collide_bar) > 0:
             for sprite in self.collide_bar:
@@ -136,18 +142,8 @@ class FastBall(pygame.sprite.Sprite):
     def update(self):
         self.movement()
         self.catch()
- 
 
-
-class Brick(pygame.sprite.Sprite):
-    def __init__(self, picture_path, pos_x, pos_y, points):
-        super().__init__()
-        self.image = pygame.image.load(picture_path).convert_alpha()
-        self.rect = self.image.get_rect()
-        self.rect.topleft = (pos_x, pos_y)
-        self.points = points
-
-
+   
 
 class Bar(pygame.sprite.Sprite):
     def __init__(self):
@@ -185,40 +181,69 @@ class Bar(pygame.sprite.Sprite):
 
 
 
+class Brick(pygame.sprite.Sprite):
+    def __init__(self, picture_path, pos_x, pos_y, points, hardness = 0):
+        super().__init__()
+        self.image = pygame.image.load(picture_path).convert_alpha()
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (pos_x, pos_y)
+        self.points = points
+        self.hardness = hardness
+    def cracked(self):
+       self.hardness = 0
+       self.image = pygame.image.load("PNG/brick_cracked3.png").convert_alpha()
+
+
+
 class BrickWall():
-    def __init__(self, group):
-        self.group = group
+    def __init__(self):
+        pass
         
-    def brick_line(self, brick_file, brick_nb, col, row, points):
+    def brick_line(self, brick_file, brick_nb, col, row, points, hard):
+        global brick_group
         i = 0
         brick_width = 51
         for brick in range(brick_nb):
             new_brick = Brick(brick_file, col+i, row, points)
+            new_brick.hardness = hard 
             i= i+ brick_width
-            self.group.add(new_brick)
+            brick_group.add(new_brick)
 
-    def brickwall_lev_1(self):
-        brick_colors = ["PNG/brick_red.png"] #,"PNG/brick_blue.png","PNG/brick_yellow.png"]                  
-        nb_of_bricks = [ 12] #, 11, 12]
-        first_brick_x = [ 10] #, 35, 10]
+    def brickwall_lev1(self):
+        global brick_group
+        brick_colors = ["PNG/brick_red.png","PNG/brick_blue.png","PNG/brick_yellow.png"]                  
+        nb_of_bricks = [ 12 , 11, 12]
+        first_brick_x = [ 10 , 35, 10]
         points = 30
         brick_height = 8
-
         for color, number, x in zip(brick_colors, nb_of_bricks, first_brick_x):
-            self.brick_line(color, number, x, brick_height, points)
+            self.brick_line(color, number, x, brick_height, points, 0)
             brick_height += 26
             points -= 10
 
-    def brickwall_lev_2(self):
-        brick_colors = ["PNG/brick_yellow.png"]#,"PNG/brick_green.png"]#,"PNG/brick_blue.png",
-                       # "PNG/brick_yellow.png", "PNG/brick_purple.png"]
-        nb_of_bricks = [ 12]#, 11]# , 12, 11, 12]
-        first_brick_x = [ 10]#, 35]#, 10, 35, 10]
+    def brickwall_lev2(self):
+        global brick_group
+        brick_colors = ["PNG/brick_red.png","PNG/brick_green.png","PNG/brick_blue.png",
+                        "PNG/brick_yellow.png", "PNG/brick_purple.png"]
+        nb_of_bricks = [ 12, 11 , 12, 11, 12]
+        first_brick_x = [ 10, 35, 10, 35, 10]
         points = 50
         brick_height = 8
-
         for color, number, x in zip(brick_colors, nb_of_bricks, first_brick_x):
-            self.brick_line(color, number, x, brick_height, points)
+            self.brick_line(color, number, x, brick_height, points, 0)
+            brick_height += 26
+            points -= 10
+
+    def brickwall_lev3(self):
+        global brick_group
+        brick_colors = ["PNG/brick_yellow.png", "PNG/brick.png", "PNG/brick_red.png","PNG/brick_green.png","PNG/brick.png"]
+        nb_of_bricks = [ 12, 11 , 12, 11, 12]
+        first_brick_x = [10, 35, 10, 35, 10]
+        hard = [0, 1, 0, 0 ,1]
+        points = 50
+        brick_height = 8
+        for color, number, x, hard in zip(brick_colors, nb_of_bricks, first_brick_x, hard):
+            self.brick_line(color, number, x, brick_height, points, hard)
             brick_height += 26
             points -= 10
 
@@ -235,7 +260,7 @@ class Button(pygame.sprite.Sprite):
 
 class GameStage():
     def __init__(self):
-        self.last_level = 2
+        self.last_level = 3
         self.level_nb = 0
 
     def counting(self):
@@ -250,14 +275,18 @@ class GameStage():
         extra_balls_group.empty()
         fast_ball_group.empty()
         ball_container_group.empty()
-
+        brick_group.empty()
+        
         bar.rect.x , bar.rect.y = 260, 430
 
         count_lev_1 = ["PNG/count_lev1_3.png", "PNG/count_lev1_2.png","PNG/count_lev1_1.png"] 
         count_lev_2 = ["PNG/count_lev2_3.png", "PNG/count_lev2_2.png","PNG/count_lev2_1.png"]
+        count_lev_3 = ["PNG/count_lev3_3.png", "PNG/count_lev3_2.png","PNG/count_lev3_1.png"]
+
 
         if self.level_nb == 0: self.count_lev = count_lev_1
-        if self.level_nb == 1: self.count_lev = count_lev_2   
+        if self.level_nb == 1: self.count_lev = count_lev_2
+        if self.level_nb == 2: self.count_lev = count_lev_3  
         for i in range(3):
             self.image = pygame.image.load(self.count_lev[i]).convert_alpha()
             self.image.get_rect()
@@ -272,26 +301,28 @@ class GameStage():
                 pygame.time.wait(1000)
                 if self.level_nb == 0:
                     level = "level_1"
-                    #brick_group = brick_group_lev_1
-                    #brickwall_lev_1()
-                    brick_wall = BrickWall(brick_group_lev_1)
-                    brick_wall.brickwall_lev_1()
-                    brick_group = brick_wall.group
-
+                    brick_wall = BrickWall()
+                    brick_wall.brickwall_lev1()
 
                 if self.level_nb == 1:
                     level = "level_2"
-                    #brick_group = brick_group_lev_2
-                    #brickwall_lev_2()
-                    brick_wall = BrickWall(brick_group_lev_2)
-                    brick_wall.brickwall_lev_2()
-                    brick_group = brick_wall.group
-
+                    brick_wall = BrickWall()
+                    brick_wall.brickwall_lev2()
                     extra_balls_group.empty()
                     fast_ball_group.empty()
                     ball.speed = 2
                     ball.image = pygame.image.load("PNG/ball.png").convert_alpha()
+
                 if self.level_nb == 2:
+                    level = "level_3"
+                    brick_wall = BrickWall()
+                    brick_wall.brickwall_lev3()
+                    extra_balls_group.empty()
+                    fast_ball_group.empty()
+                    ball.speed = 2
+                    ball.image = pygame.image.load("PNG/ball.png").convert_alpha()
+
+                if self.level_nb == 3:
                     level = "new_game"
 
     def start(self):
@@ -302,7 +333,7 @@ class GameStage():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            if event.type in [pygame.MOUSEBUTTONDOWN , pygame.KEYDOWN]: #or event.key == pygame.K_RETURN:
+            if event.type in [pygame.MOUSEBUTTONDOWN , pygame.KEYDOWN]:
                 level = "counting"
         win.blit(start_bg,(0,0))
         start_btn_group.draw(win)
@@ -316,14 +347,15 @@ class GameStage():
                 pygame.quit()
                 sys.exit()
             if len(brick_group)== 0:
-                if level == "level_2":
-                    pygame.time.wait(1000)
+                pygame.time.wait(500)
+                if level == "level_3":
                     self.level_nb = 0
                     level = "new_game"
                 else:
+                    level = "counting"
                     self.level_nb += 1
                     counter = 3
-                    level = "counting"
+                    
         if counter == 0:
             pygame.time.wait(1000)
             level = "new_game"
@@ -336,7 +368,7 @@ class GameStage():
             ball_container = BallContainer()
             ball_container_group.add(ball_container)
     
-        if level == "level_1": level_range = 800
+        if level == "level_1": level_range = 1000
         else: level_range = 400
         rand_fast = random.randrange(level_range)
         if rand_fast == 1:
@@ -376,10 +408,10 @@ class GameStage():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE: #.KEYDOWN:
+                if event.key == pygame.K_ESCAPE: 
                     pygame.quit()
                     sys.exit()
-                if event.key in [ pygame.K_RETURN, pygame.K_KP_ENTER]: #.KEYDOWN:
+                if event.key in [ pygame.K_RETURN, pygame.K_KP_ENTER]:
                     level = "counting"
                     counter = 3
                     score = 0
@@ -410,7 +442,7 @@ class GameStage():
            self.start()
         elif level == "counting":
            self.counting()
-        elif level in ["level_1", "level_2"]:
+        elif level in ["level_1", "level_2", "level_3"]:
            self.level()
         elif level == "new_game":
            self.new_game()
@@ -434,9 +466,6 @@ icon = pygame.image.load('PNG/icon.png')
 pygame.display.set_icon(icon)
 
 game_font = pygame.font.Font('PNG/squaredance10.ttf',24)
-
-##cursor = pygame.cursors.Cursor(pygame.SYSTEM_CURSOR_HAND)
-##pygame.mouse.set_cursor(cursor)
 
 start_bg = pygame.image.load("PNG/start.png").convert_alpha()
 background = pygame.image.load("PNG/tlo.png").convert_alpha()
@@ -462,20 +491,9 @@ ball_container_group = pygame.sprite.Group()
 extra_balls_group = pygame.sprite.Group()
 fast_ball_group = pygame.sprite.Group()
 
-brick_group_lev_1 = pygame.sprite.Group()
-brick_group_lev_2 = pygame.sprite.Group()
-
-brick_wall = BrickWall(brick_group_lev_1)
-brick_wall.brickwall_lev_1()
-
-
-#brickwall_lev_1()
-#brickwall_lev_2()
-
-#brick_group = brick_group_lev_1
-brick_group = brick_wall.group
-
-
+brick_group = pygame.sprite.Group()
+brick_wall = BrickWall()
+brick_wall.brickwall_lev1()
 
 bar = Bar()
 bar_group = pygame.sprite.GroupSingle()
